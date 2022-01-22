@@ -7,7 +7,7 @@ import "../openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../openzeppelin/contracts/utils/Counters.sol";
 import "../interfaces/ICloseYourEyesV0.sol";
 
-contract SaleV1 is Context {
+contract SaleV0 is Context {
 	using SafeMath for uint256;
 	using Counters for Counters.Counter;
 
