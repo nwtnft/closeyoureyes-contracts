@@ -5,13 +5,13 @@ pragma solidity ^0.8.10;
 import "../openzeppelin/contracts/utils/Context.sol";
 import "../openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../openzeppelin/contracts/utils/Counters.sol";
-import "../fatty-chuchucat/IFattyChuchucat.sol";
+import "../interfaces/ICloseYourEyesV1.sol";
 
 contract SaleV1 is Context {
 	using SafeMath for uint256;
 	using Counters for Counters.Counter;
 
-	IFattyChuchucat public FattyChuchucatContract;
+	ICloseYourEyesV1 public FattyChuchucatContract;
 	uint256 public publicSalePrice;
 
 	Counters.Counter private _freeSaleIdTracker;
@@ -164,7 +164,7 @@ contract SaleV1 is Context {
 		address _C7,
 		address _dev
 	) {
-		FattyChuchucatContract = IFattyChuchucat(_NFT);
+		FattyChuchucatContract = ICloseYourEyesV1(_NFT);
 		C1 = _C1;
 		C2 = _C2;
 		C3 = _C3;

@@ -5,7 +5,7 @@ pragma solidity ^0.8.10;
 import "../openzeppelin/contracts/utils/Context.sol";
 import "../openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../openzeppelin/contracts/utils/Counters.sol";
-import "../v0/ICloseYourEyesV0.sol";
+import "../interfaces/ICloseYourEyesV0.sol";
 
 contract SaleV1 is Context {
 	using SafeMath for uint256;
