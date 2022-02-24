@@ -12,22 +12,23 @@ contract SaleV0 is Context {
 	using Counters for Counters.Counter;
 
 	ICloseYourEyesV0 public CloseYourEyesV0;
-	uint256 public publicSalePrice;
 
-	Counters.Counter public publicSaleP1IdTracker;
-	Counters.Counter public publicSaleP2IdTracker;
-	Counters.Counter public publicSaleP3IdTracker;
+	Counters.Counter internal sale1Tracker;
+	Counters.Counter internal sale2Tracker;
+	Counters.Counter internal whiteListTracker;
 
-	uint256 public constant MAX_PUBLIC_SALE_P1_SUPPLY = 1000;
-	uint256 public constant MAX_PUBLIC_SALE_P2_SUPPLY = 2000;
-	uint256 public constant MAX_PUBLIC_SALE_P3_SUPPLY = 5000;
 	uint256 public constant MAX_NFT_SUPPLY = 8888;
+	uint256 public SALE1_MAX_SUPPLY = 1500;
+	uint256 public SALE2_MAX_SUPPLY = 5000;
 
-	uint256 public constant MAX_PUBLICSALE_AMOUNT = 30;
+	uint256 public MAX_MINT_AMOUNT1 = 2;
+	uint256 public MAX_MINT_AMOUNT2 = 3;
 
-	bool public isPublicSaleP1 = false;
-	bool public isPublicSaleP2 = false;
-	bool public isPublicSaleP3 = false;
+	uint256 public salePrice1 = 200 ether;
+	uint256 public salePrice2 = 300 ether;
+
+	bool public isSale1 = false;
+	bool public isSale2 = false;
 
 	address public C1;
 	address public C2;
@@ -35,35 +36,27 @@ contract SaleV0 is Context {
 	address public C4;
 	address public devAddress;
 
-	mapping(address => bool) public freeSaleBuyerList;
-
-	modifier publicSaleP1Role(uint256 numberOfTokens) {
-		require(isPublicSaleP1, "The sale has not started.");
-		require(CloseYourEyesV0.totalSupply() < MAX_NFT_SUPPLY, "Sale has already ended.");
-		require(publicSaleP1IdTracker.current() < MAX_PUBLIC_SALE_P1_SUPPLY, "Sale has already ended.");
-		require(publicSaleP1IdTracker.current().add(numberOfTokens) <= MAX_PUBLIC_SALE_P1_SUPPLY, "Purchase would exceed max supply of NFT");
-		require(numberOfTokens <= MAX_PUBLICSALE_AMOUNT, "Can only mint 30 NFT at a time");
-		require(publicSalePrice.mul(numberOfTokens) <= msg.value, "Eth value sent is not correct");
+	mapping(address => bool) public whiteList;
+	mapping(address => uint256) public publicSaleBlockTracker;
+	
+	modifier saleRole(uint256 numberOfTokens, bool thisIsSale, Counters.Counter storage thisTracker, uint256 thisMaxSupply, uint256 thisSaleAmount, uint256 thisSalePrice) {
+		require(thisIsSale, "Sale Not start");
+		require(CloseYourEyesV0.totalSupply() < MAX_NFT_SUPPLY, "Total Sale has already ended");
+		require(CloseYourEyesV0.totalSupply().add(numberOfTokens) <= MAX_NFT_SUPPLY, "Total Purchase would exceed max supply of NFT");
+		require(thisTracker.current() < thisMaxSupply, "Sale has already ended");
+		require(thisTracker.current().add(numberOfTokens) <= thisMaxSupply, "Purchase would exceed max supply of NFT 2");
+		require(numberOfTokens <= thisSaleAmount, "overfolow mint amount");
+		require(thisSalePrice.mul(numberOfTokens) <= msg.value, "Eth value sent is not correct");
 		_;
 	}
 
-	modifier publicSaleP2Role(uint256 numberOfTokens) {
-		require(isPublicSaleP2, "The sale has not started.");
-		require(CloseYourEyesV0.totalSupply() < MAX_NFT_SUPPLY, "Sale has already ended.");
-		require(publicSaleP2IdTracker.current() < MAX_PUBLIC_SALE_P2_SUPPLY, "Sale has already ended.");
-		require(publicSaleP2IdTracker.current().add(numberOfTokens) <= MAX_PUBLIC_SALE_P2_SUPPLY, "Purchase would exceed max supply of NFT");
-		require(numberOfTokens <= MAX_PUBLICSALE_AMOUNT, "Can only mint 30 NFT at a time");
-		require(publicSalePrice.mul(numberOfTokens) <= msg.value, "Eth value sent is not correct");
+	modifier whiteListRole() {
+		require(whiteList[msg.sender], "This address is not on the whitelist");
 		_;
 	}
 
-	modifier publicSaleP3Role(uint256 numberOfTokens) {
-		require(isPublicSaleP3, "The sale has not started.");
-		require(CloseYourEyesV0.totalSupply() < MAX_NFT_SUPPLY, "Sale has already ended.");
-		require(publicSaleP3IdTracker.current() < MAX_PUBLIC_SALE_P3_SUPPLY, "Sale has already ended.");
-		require(publicSaleP3IdTracker.current().add(numberOfTokens) <= MAX_PUBLIC_SALE_P3_SUPPLY, "Purchase would exceed max supply of NFT");
-		require(numberOfTokens <= MAX_PUBLICSALE_AMOUNT, "Can only mint 30 NFT at a time");
-		require(publicSalePrice.mul(numberOfTokens) <= msg.value, "Eth value sent is not correct");
+	modifier publicSaleRole() {
+		require(publicSaleBlockTracker[msg.sender].add(5) < block.number, "You can mint every 5 blocks.");
 		_;
 	}
 
@@ -72,26 +65,6 @@ contract SaleV0 is Context {
   */
 	modifier onlyCreator() {
 		require(C1 == _msgSender() || C2 == _msgSender() || C3 == _msgSender() || C4 == _msgSender() || devAddress == _msgSender(), "onlyCreator: caller is not the creator");
-		_;
-	}
-
-	modifier onlyC1() {
-		require(C1 == _msgSender(), "only C1: caller is not the C1");
-		_;
-	}
-
-	modifier onlyC2() {
-		require(C2 == _msgSender(), "only C2: caller is not the C2");
-		_;
-	}
-
-	modifier onlyC3() {
-		require(C3 == _msgSender(), "only C3: caller is not the C3");
-		_;
-	}
-
-	modifier onlyC4() {
-		require(C4 == _msgSender(), "only C4: caller is not the C4");
 		_;
 	}
 
@@ -114,35 +87,44 @@ contract SaleV0 is Context {
 		C3 = _C3;
 		C4 = _C4;
 		devAddress = _dev;
-		setPublicSalePrice(150000000000000000000); // 150 klay
 	}
 
-	function preMint(uint256 numberOfTokens, address receiver) public onlyDev {
-		for (uint256 i = 0; i < numberOfTokens; i++) {
-			if (CloseYourEyesV0.totalSupply() < MAX_NFT_SUPPLY) {
-				CloseYourEyesV0.mint(receiver);
-			}
-		}
-	}
-
-	function publicSaleP1(uint256 numberOfTokens) public payable publicSaleP1Role(numberOfTokens) {
-		for (uint256 i = 0; i <  numberOfTokens; i++) {
-			CloseYourEyesV0.mint(_msgSender());
-			publicSaleP1IdTracker.increment();
-		}
-	}
-
-	function publicSaleP2(uint256 numberOfTokens) public payable publicSaleP2Role(numberOfTokens) {
+	function sale1(uint256 numberOfTokens) public payable whiteListRole saleRole(numberOfTokens, isSale1, sale1Tracker, SALE1_MAX_SUPPLY, MAX_MINT_AMOUNT1, salePrice1) {
 		for (uint256 i = 0; i < numberOfTokens; i++) {
 			CloseYourEyesV0.mint(_msgSender());
-			publicSaleP2IdTracker.increment();
+			sale1Tracker.increment();
 		}
+		whiteList[msg.sender] = false;
 	}
 
-	function publicSaleP3(uint256 numberOfTokens) public payable publicSaleP3Role(numberOfTokens) {
+	function sale2(uint256 numberOfTokens) public payable publicSaleRole saleRole(numberOfTokens, isSale2, sale2Tracker, SALE2_MAX_SUPPLY, MAX_MINT_AMOUNT2, salePrice2) {
 		for (uint256 i = 0; i < numberOfTokens; i++) {
 			CloseYourEyesV0.mint(_msgSender());
-			publicSaleP3IdTracker.increment();
+			sale2Tracker.increment();
+		}
+		whiteList[msg.sender] = false;
+	}
+
+	function resetTracker1() public onlyDev {
+		sale1Tracker.reset();
+	}
+
+	function setIsSale1() public onlyDev {
+		isSale1 = !isSale1;
+	}
+
+	function setIsSale2() public onlyDev {
+		isSale2 = !isSale2;
+	}
+
+	function setSale2MaxSupply(uint256 supply) public onlyDev {
+		SALE2_MAX_SUPPLY = supply;
+	}
+
+	function setWhiteList(address[] memory wl) public onlyDev {
+		for (uint256 i = 0; i < wl.length; i++) {
+			whiteList[wl[i]] = true;
+			whiteListTracker.increment();
 		}
 	}
 
@@ -156,39 +138,11 @@ contract SaleV0 is Context {
 		require(payable(C4).send(percentage.mul(25)));
 	}
 
-	function setC1(address changeAddress) public onlyC1 {
-		C1 = changeAddress;
-	}
-
-	function setC2(address changeAddress) public onlyC2 {
-		C2 = changeAddress;
-	}
-
-	function setC3(address changeAddress) public onlyC3 {
-		C3 = changeAddress;
-	}
-
-	function setC4(address changeAddress) public onlyC4 {
-		C4 = changeAddress;
-	}
-
 	function setDev(address changeAddress) public onlyDev {
 		devAddress = changeAddress;
 	}
 
-	function setPublicSaleP1() public onlyDev {
-		isPublicSaleP1 = !isPublicSaleP1;
-	}
-
-  function setPublicSaleP2() public onlyDev {
-		isPublicSaleP2 = !isPublicSaleP2;
-	}
-
-  function setPublicSaleP3() public onlyDev {
-		isPublicSaleP3 = !isPublicSaleP3;
-	}
-
-	function setPublicSalePrice(uint256 price) public onlyDev {
-		publicSalePrice = price;
+	function getWhiteListLength() public view returns(uint256) {
+		return whiteListTracker.current();
 	}
 }
