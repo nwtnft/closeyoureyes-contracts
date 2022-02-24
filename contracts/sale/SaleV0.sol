@@ -51,20 +51,12 @@ contract SaleV0 is Context {
 	}
 
 	modifier whiteListRole() {
-		require(whiteList[msg.sender], "This address is not on the whitelist");
+		require(whiteList[_msgSender()], "This address is not on the whitelist");
 		_;
 	}
 
 	modifier publicSaleRole() {
-		require(publicSaleBlockTracker[msg.sender].add(5) < block.number, "You can mint every 5 blocks.");
-		_;
-	}
-
-	/*
-    C1: Artist, C2: Developer, C3: CampJackson, C4: Team
-  */
-	modifier onlyCreator() {
-		require(C1 == _msgSender() || C2 == _msgSender() || C3 == _msgSender() || C4 == _msgSender() || devAddress == _msgSender(), "onlyCreator: caller is not the creator");
+		require(publicSaleBlockTracker[_msgSender()].add(5) < block.number, "You can mint every 5 blocks.");
 		_;
 	}
 
@@ -72,6 +64,10 @@ contract SaleV0 is Context {
 		require(devAddress == _msgSender(), "only dev: caller is not the dev");
 		_;
 	}
+
+	/*
+    C1: Artist, C2: Developer, C3: CampJackson, C4: Team
+  */
 
 	constructor(
 		address _NFT,
@@ -94,7 +90,7 @@ contract SaleV0 is Context {
 			CloseYourEyesV0.mint(_msgSender());
 			sale1Tracker.increment();
 		}
-		whiteList[msg.sender] = false;
+		whiteList[_msgSender()] = false;
 	}
 
 	function sale2(uint256 numberOfTokens) public payable publicSaleRole saleRole(numberOfTokens, isSale2, sale2Tracker, SALE2_MAX_SUPPLY, MAX_MINT_AMOUNT2, salePrice2) {
@@ -102,7 +98,7 @@ contract SaleV0 is Context {
 			CloseYourEyesV0.mint(_msgSender());
 			sale2Tracker.increment();
 		}
-		whiteList[msg.sender] = false;
+		publicSaleBlockTracker[_msgSender()] = block.number;
 	}
 
 	function resetTracker1() public onlyDev {
@@ -128,7 +124,7 @@ contract SaleV0 is Context {
 		}
 	}
 
-	function withdraw() public payable onlyCreator {
+	function withdraw() public payable onlyDev {
 		uint256 contractBalance = address(this).balance;
 		uint256 percentage = contractBalance.div(100);
 
