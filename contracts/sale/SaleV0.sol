@@ -124,6 +124,13 @@ contract SaleV0 is Context {
 		}
 	}
 
+	function deleteWhiteList(address[] memory wl) public onlyDev {
+		for (uint256 i = 0; i < wl.length; i++) {
+			whiteList[wl[i]] = false;
+			whiteListTracker.decrement();
+		}
+	}
+
 	function withdraw() public payable onlyDev {
 		uint256 contractBalance = address(this).balance;
 		uint256 percentage = contractBalance.div(100);
