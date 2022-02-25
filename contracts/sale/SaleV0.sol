@@ -85,6 +85,8 @@ contract SaleV0 is Context {
 		devAddress = _dev;
 	}
 
+	receive() external payable {}
+
 	function sale1(uint256 numberOfTokens) public payable whiteListRole saleRole(numberOfTokens, isSale1, sale1Tracker, SALE1_MAX_SUPPLY, MAX_MINT_AMOUNT1, salePrice1) {
 		for (uint256 i = 0; i < numberOfTokens; i++) {
 			CloseYourEyesV0.mint(_msgSender());
