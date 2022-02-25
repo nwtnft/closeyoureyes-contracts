@@ -141,4 +141,12 @@ contract SaleV0 is Context {
 	function getWhiteListLength() public view returns(uint256) {
 		return whiteListTracker.current();
 	}
+
+	function getTracker1Length() public view returns(uint256) {
+		return sale1Tracker.current();
+	}
+
+	function getTracker2Length() public view returns(uint256) {
+		return sale2Tracker.current();
+	}
 }
